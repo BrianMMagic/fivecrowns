@@ -1,0 +1,12 @@
+{
+  "name": "fivecrowns",
+  "version": "1.0.0",
+  "description": "A web app for playing Five Crowns with your family - it shuffles, deals and keeps score.",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node test/run.js"
+  }
+}
