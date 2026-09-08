@@ -20,6 +20,25 @@ npm test           # 24 rules and engine tests
 One person creates a game and gets a 4-letter code; everyone else joins with that
 code (or the invite link, which is just `.../#CODE`).
 
+### Trying it out on your own
+
+Your seat is remembered per browser, so a second tab would rejoin as the *same*
+player. To be several players at once, give each tab its own identity with `?p=`:
+
+```
+http://localhost:3000/?p=1     you, the host
+http://localhost:3000/?p=2     a second player
+http://localhost:3000/?p=3     ...and so on
+```
+
+Create the game in the first tab, then paste the 4-letter code into the others.
+Arrange the tabs side by side and you can watch a play land on every screen at
+once. Reloading a tab keeps that tab's seat and hand.
+
+Round 1 only deals 3 cards, so you'll usually see someone go out within a few
+turns — enough to exercise dealing, melding, the last turn everyone else gets,
+and the scorecard.
+
 ### Putting it somewhere your family can reach
 
 The app is a single Node process serving both the page and the game, so almost

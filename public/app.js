@@ -44,7 +44,13 @@ function act(action, payload = {}) {
   );
 }
 
-const tokenKey = (room) => `fivecrowns.token.${room}`;
+// Your seat is remembered in this browser so you can close the tab and come
+// back to the same hand. Tabs in one browser share that storage, so ?p=2, ?p=3
+// and so on give you separate identities - handy for trying the game out on
+// your own with several tabs open.
+const SEAT = new URLSearchParams(location.search).get('p');
+const suffix = SEAT ? `.${SEAT}` : '';
+const tokenKey = (room) => `fivecrowns.token.${room}${suffix}`;
 const saveToken = (room, token) => localStorage.setItem(tokenKey(room), token);
 const loadToken = (room) => localStorage.getItem(tokenKey(room));
 
@@ -673,7 +679,7 @@ function enterRoom(room, token) {
   S.room = room;
   S.token = token;
   S.joinError = null;
-  localStorage.setItem('fivecrowns.last', room);
+  localStorage.setItem(`fivecrowns.last${suffix}`, room);
   history.replaceState(null, '', `#${room}`);
   connect();
 }
@@ -715,7 +721,7 @@ function connect() {
 // ------------------------------------------------------------------ boot
 (function boot() {
   const hash = (location.hash || '').replace('#', '').toUpperCase().slice(0, 4);
-  const room = hash || localStorage.getItem('fivecrowns.last');
+  const room = hash || localStorage.getItem(`fivecrowns.last${suffix}`);
   const token = room ? loadToken(room) : null;
   if (room && token) enterRoom(room, token);
   else renderHome();
