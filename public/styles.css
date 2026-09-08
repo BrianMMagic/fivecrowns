@@ -84,6 +84,9 @@ label { display: block; margin-bottom: 0.8rem; }
 label > span { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
 .row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .row > * { flex: 1 1 auto; }
+/* Two buttons that must share one line even on a 320px phone. */
+.row.tight { flex-wrap: nowrap; }
+.row.tight > button { flex: 1 1 0; min-width: 0; padding-left: 0.55rem; padding-right: 0.55rem; }
 
 .panel {
   background: var(--panel);
@@ -99,8 +102,10 @@ label > span { display: block; font-size: 0.85rem; color: var(--muted); margin-b
   top: 0.7rem;
   transform: translate(-50%, -160%);
   z-index: 50;
-  max-width: min(30rem, 92vw);
-  padding: 0.7rem 1rem;
+  max-width: min(26rem, 90vw);
+  padding: 0.6rem 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.3;
   border-radius: 11px;
   background: var(--danger);
   color: #2a0a0a;
@@ -198,7 +203,7 @@ button.card:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px;
   gap: 0.6rem;
   margin-bottom: 0.8rem;
 }
-.topbar .title { font-weight: 750; font-size: 1.05rem; }
+.topbar .title { font-weight: 750; font-size: 1.05rem; white-space: nowrap; }
 .badge {
   display: inline-flex;
   align-items: center;
@@ -242,7 +247,21 @@ button.card:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px;
 .pile .label { font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem; }
 .pile .card { --card-w: 4rem; }
 
-.melds { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.melds { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+/* The lay-down tray: what you have committed so far, kept compact so the
+   cards themselves stay on screen. */
+.tray {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 0.7rem;
+  align-items: center;
+  margin-top: 0.7rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--line);
+}
 .meld {
   display: flex;
   gap: 0.2rem;
@@ -282,6 +301,17 @@ details.rules li { margin-bottom: 0.35rem; font-size: 0.88rem; color: var(--mute
   font-weight: 700;
   color: var(--gold);
   text-indent: 0.35em;
+}
+
+/* Small phones: trim the chrome so names and titles are not squeezed out. */
+@media (max-width: 24rem) {
+  :root { --card-w: 3rem; }
+  .wordy { display: none; }
+  .badge { padding: 0.2rem 0.42rem; font-size: 0.72rem; }
+  .topbar .title { font-size: 0.95rem; }
+  .player-row { padding: 0.45rem 0.55rem; gap: 0.4rem; }
+  main { padding-left: 0.65rem; padding-right: 0.65rem; }
+  .panel { padding: 0.8rem; }
 }
 
 @media (min-width: 34rem) {

@@ -223,7 +223,7 @@ function renderTable() {
             <span class="pname">${esc(p.name)}</span>
             ${p.isOut ? '<span class="badge turn">went out</span>' : ''}
             ${active && !p.isOut ? '<span class="badge turn">turn</span>' : ''}
-            <span class="badge">${p.handCount} card${p.handCount === 1 ? '' : 's'}</span>
+            <span class="badge">${p.handCount}<span class="wordy"> card${p.handCount === 1 ? '' : 's'}</span></span>
             <span class="badge">${p.total} pts</span>
           </div>`;
         })
@@ -348,53 +348,49 @@ function builderHTML() {
 
   return `
     <div class="panel">
-      <h2>${st.finalTurn ? 'Lay down what you can' : 'Go out'}</h2>
-      <p class="small muted">
-        ${
+      <div style="display:flex;align-items:baseline;gap:0.45rem;flex-wrap:wrap">
+        <h2 style="margin:0">${st.finalTurn ? 'Lay down' : 'Go out'}</h2>
+        <span class="small muted">${
           st.finalTurn
-            ? 'Put down any books or runs, pick a card to discard, and whatever is left counts against you.'
-            : 'Every card except your discard has to be part of a book or a run.'
-        }
-      </p>
+            ? 'anything you keep counts against you'
+            : 'every card but your discard must be melded'
+        }</span>
+      </div>
 
-      <div class="small muted" style="margin:0.7rem 0 0.3rem">Melds (${b.melds.length})</div>
-      ${
-        b.melds.length
-          ? `<div class="melds">${b.melds
-              .map((group, i) =>
-                meldHTML(
-                  group.map((id) => byId.get(id)),
-                  `<button class="tiny danger" data-act="unmeld" data-i="${i}" aria-label="Break up this meld">×</button>`
+      <div class="tray">
+        <div class="small muted">Putting down</div>
+        <div class="melds">
+          ${
+            b.melds.length
+              ? b.melds
+                  .map((group, i) =>
+                    meldHTML(
+                      group.map((id) => byId.get(id)),
+                      `<button class="tiny danger" data-act="unmeld" data-i="${i}" aria-label="Break up this meld">×</button>`
+                    )
+                  )
+                  .join('')
+              : '<span class="small muted">nothing yet</span>'
+          }
+        </div>
+        <div class="small muted">Discarding</div>
+        <div class="melds">
+          ${
+            b.discardId
+              ? meldHTML(
+                  [byId.get(b.discardId)],
+                  `<button class="tiny danger" data-act="undiscard" aria-label="Take the discard back">×</button>`
                 )
-              )
-              .join('')}</div>`
-          : `<p class="small muted" style="margin:0">Nothing down yet.</p>`
-      }
-
-      <div class="small muted" style="margin:0.9rem 0 0.3rem">Discard</div>
-      <div class="melds">
-        ${
-          b.discardId
-            ? meldHTML(
-                [byId.get(b.discardId)],
-                `<button class="tiny danger" data-act="undiscard" aria-label="Take the discard back">×</button>`
-              )
-            : cardHTML(null, { small: true, placeholder: 'pick one' })
-        }
+              : '<span class="small muted">pick a card below</span>'
+          }
+        </div>
       </div>
 
-      <div class="small muted" style="margin:0.9rem 0 0.3rem">
-        Still in hand${st.finalTurn ? ` — ${leftoverPoints} pts against you` : ''}
+      <div class="small muted" style="margin:0.8rem 0 0.1rem">
+        Still in hand${st.finalTurn ? ` — worth ${leftoverPoints} against you` : ''}
       </div>
-      <div class="hand" style="min-height:3.5rem">
+      <div class="hand" style="min-height:3.5rem;padding-bottom:0.2rem">
         ${remaining.map((c) => cardHTML(c, { action: 'pick', selected: S.selection.has(c.id) })).join('')}
-      </div>
-
-      <div class="row">
-        <button class="subtle" data-act="make-meld" ${S.selection.size >= 3 ? '' : 'disabled'}>
-          Meld these (${S.selection.size})</button>
-        <button class="subtle" data-act="set-discard" ${S.selection.size === 1 ? '' : 'disabled'}>
-          Set discard</button>
       </div>
     </div>`;
 }
@@ -402,11 +398,21 @@ function builderHTML() {
 function builderActionsHTML() {
   const st = S.state;
   const b = S.builder;
-  return `<div class="row">
-    <button class="ghost" data-act="cancel-builder">Cancel</button>
-    <button data-act="submit-builder" ${b.discardId ? '' : 'disabled'}>
-      ${st.finalTurn ? 'Finish my turn' : 'Go out'}</button>
-  </div>`;
+  const sel = S.selection.size;
+  // These live in the sticky bar so they stay under your thumb however long
+  // your hand is - on a 13-card round the cards alone fill the screen.
+  return `
+    <div class="row tight" style="margin-bottom:0.45rem">
+      <button class="subtle" data-act="make-meld" ${sel >= 3 ? '' : 'disabled'}>
+        Meld (${sel})</button>
+      <button class="subtle" data-act="set-discard" ${sel === 1 ? '' : 'disabled'}>
+        Set discard</button>
+    </div>
+    <div class="row tight">
+      <button class="ghost" data-act="cancel-builder">Cancel</button>
+      <button data-act="submit-builder" ${b.discardId ? '' : 'disabled'}>
+        ${st.finalTurn ? 'Finish turn' : 'Go out'}</button>
+    </div>`;
 }
 
 function openBuilder() {

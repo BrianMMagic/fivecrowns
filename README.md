@@ -39,6 +39,22 @@ Round 1 only deals 3 cards, so you'll usually see someone go out within a few
 turns — enough to exercise dealing, melding, the last turn everyone else gets,
 and the scorecard.
 
+### Testing it on your phone
+
+If your phone and the computer running `npm start` are on the same wifi, open
+`http://<your computer's address>:3000` on the phone — no tunnel, no signup. Find
+the address with `ipconfig getifaddr en0` on a Mac, `hostname -I` on Linux, or
+`ipconfig` on Windows (the IPv4 address). It looks like `192.168.1.24`.
+
+On cellular, or to let the rest of the family in, put it behind a tunnel:
+
+```sh
+cloudflared tunnel --url http://localhost:3000
+```
+
+That prints a public `https://…trycloudflare.com` address that works anywhere and
+stops existing when you stop the command.
+
 ### Putting it somewhere your family can reach
 
 The app is a single Node process serving both the page and the game, so almost
