@@ -57,6 +57,12 @@ stops existing when you stop the command.
 
 ### Putting it somewhere your family can reach
 
+Everyone plays in a normal phone browser — nothing to install, no accounts. You
+just need one web address to send them, which means putting the app on a host
+once.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/BrianMMagic/fivecrowns)
+
 The app is a single Node process serving both the page and the game, so any host
 that runs Node works. It listens on `$PORT` (default 3000) and needs no build
 step. `render.yaml` in this repo configures [Render](https://render.com):
