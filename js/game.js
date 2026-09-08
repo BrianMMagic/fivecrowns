@@ -1,8 +1,8 @@
 // Authoritative game state. Every rule check happens here; the browser is
 // never trusted. Actions return { error } or mutate the game and log a line.
 
-import crypto from 'node:crypto';
-import * as R from '../shared/rules.js';
+import * as R from './rules.js';
+import { randomInt, randomId } from './random.js';
 
 const now = () => Date.now();
 
@@ -35,7 +35,7 @@ function logLine(game, text) {
 
 function shuffle(cards) {
   for (let i = cards.length - 1; i > 0; i--) {
-    const j = crypto.randomInt(i + 1);
+    const j = randomInt(i + 1);
     [cards[i], cards[j]] = [cards[j], cards[i]];
   }
   return cards;
@@ -52,7 +52,7 @@ export function addPlayer(game, { name, token, isHost }) {
     return { error: 'Someone in this game already has that name.' };
   }
   const player = {
-    id: crypto.randomUUID(),
+    id: randomId(),
     token,
     name: clean,
     isHost: !!isHost,
@@ -82,7 +82,7 @@ export function startGame(game) {
   if (game.players.length < R.MIN_PLAYERS) {
     return { error: `You need at least ${R.MIN_PLAYERS} players.` };
   }
-  game.dealerIndex = crypto.randomInt(game.players.length);
+  game.dealerIndex = randomInt(game.players.length);
   game.round = 0;
   startRound(game);
   return {};

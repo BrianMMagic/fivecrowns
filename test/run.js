@@ -1,7 +1,7 @@
 // Rules and engine tests. No framework: node test/run.js
 import assert from 'node:assert/strict';
-import * as R from '../shared/rules.js';
-import * as G from '../server/game.js';
+import * as R from '../js/rules.js';
+import * as G from '../js/game.js';
 
 let passed = 0;
 const tests = [];

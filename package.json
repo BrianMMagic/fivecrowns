@@ -1,12 +1,12 @@
 {
   "name": "fivecrowns",
   "version": "1.0.0",
-  "description": "A web app for playing Five Crowns with your family - it shuffles, deals and keeps score.",
+  "description": "A web app for playing Five Crowns with your family - it shuffles, deals and keeps score. Static site plus a Firebase Realtime Database; no server to run.",
   "type": "module",
   "private": true,
   "engines": { "node": ">=18" },
   "scripts": {
-    "start": "node server/index.js",
+    "start": "node dev-server.js",
     "test": "node test/run.js"
   }
 }

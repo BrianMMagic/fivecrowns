@@ -1,18 +1,15 @@
-import * as R from '/shared/rules.js';
+import * as R from './rules.js';
+import { createTable } from './table.js';
+import { configured } from './db.js';
 
 const appEl = document.getElementById('app');
 const toastEl = document.getElementById('toast');
 
 const S = {
-  room: null,
-  token: null,
   state: null,
   order: [],           // local left-to-right order of my hand, by card id
   selection: new Set(),
   builder: null,       // { melds: [[cardId]], discardId } while laying down
-  source: null,        // EventSource
-  connected: false,
-  joinError: null,
 };
 
 // ------------------------------------------------------------------ utilities
@@ -27,32 +24,37 @@ function toast(message, kind = 'error') {
   toastTimer = setTimeout(() => (toastEl.className = 'toast'), 3600);
 }
 
-async function api(path, body) {
-  const res = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({ error: 'The server sent something unexpected.' }));
-  if (!res.ok) throw new Error(data.error || 'Something went wrong.');
-  return data;
-}
-
-function act(action, payload = {}) {
-  return api('/api/action', { room: S.room, token: S.token, action, payload }).catch((e) =>
-    toast(e.message)
-  );
-}
-
-// Your seat is remembered in this browser so you can close the tab and come
-// back to the same hand. Tabs in one browser share that storage, so ?p=2, ?p=3
-// and so on give you separate identities - handy for trying the game out on
-// your own with several tabs open.
+// The seat this browser holds. ?p=2, ?p=3 and so on let one browser be
+// several players at once, which is how you try the game out on your own.
 const SEAT = new URLSearchParams(location.search).get('p');
 const suffix = SEAT ? `.${SEAT}` : '';
-const tokenKey = (room) => `fivecrowns.token.${room}${suffix}`;
-const saveToken = (room, token) => localStorage.setItem(tokenKey(room), token);
-const loadToken = (room) => localStorage.getItem(tokenKey(room));
+
+const table = createTable({
+  seatSuffix: suffix,
+  onState(next) {
+    const before = S.state;
+    S.state = next;
+    if (!next) return;
+    if (!before || before.round !== next.round) {
+      S.order = [];
+      S.selection.clear();
+      S.builder = null;
+    }
+    if (before && before.turnIndex !== next.turnIndex) S.builder = null;
+    render();
+  },
+  onError(message) {
+    toast(message);
+  },
+});
+
+/** Make a move. The table layer decides whether to apply or post it. */
+function act(action, payload = {}) {
+  return table.act(action, payload).catch((e) => toast(e.message));
+}
+
+const rememberRoom = (room) => localStorage.setItem(`fivecrowns.last${suffix}`, room);
+const lastRoom = () => localStorage.getItem(`fivecrowns.last${suffix}`);
 
 // ------------------------------------------------------------------ state view
 const me = () => (S.state ? S.state.players.find((p) => p.id === S.state.you) : null);
@@ -136,7 +138,6 @@ function renderHome() {
       <h1>👑 Five Crowns</h1>
       <p class="muted">No shuffling, no dealing, no arguing about the score.</p>
     </div>
-    ${S.joinError ? `<div class="panel" style="border-color:var(--danger)">${esc(S.joinError)}</div>` : ''}
     <div class="panel">
       <h2>Start a game</h2>
       <label><span>Your name</span>
@@ -168,7 +169,7 @@ function renderLobby() {
   appEl.innerHTML = `
     <div class="center" style="padding:0.8rem 0">
       <p class="muted small" style="margin-bottom:0.2rem">Game code</p>
-      <div class="code">${esc(S.room)}</div>
+      <div class="code">${esc(st.code || '')}</div>
       <button class="tiny ghost" data-act="share" style="margin-top:0.6rem">Copy invite link</button>
     </div>
     <div class="panel">
@@ -600,13 +601,16 @@ appEl.addEventListener('click', async (e) => {
     case 'create': {
       const name = document.getElementById('host-name').value.trim();
       if (!name) return toast('Enter your name first.');
+      const allowAllWildMelds = document.getElementById('all-wild').checked;
+      el.disabled = true;
       try {
-        const allowAllWildMelds = document.getElementById('all-wild').checked;
-        const res = await api('/api/create', { name, allowAllWildMelds });
-        saveToken(res.room, res.token);
-        enterRoom(res.room, res.token);
+        const room = await table.create(name, { allowAllWildMelds });
+        rememberRoom(room);
+        history.replaceState(null, '', `#${room}`);
       } catch (err) {
         toast(err.message);
+      } finally {
+        el.disabled = false;
       }
       return;
     }
@@ -615,17 +619,20 @@ appEl.addEventListener('click', async (e) => {
       const name = document.getElementById('join-name').value.trim();
       if (room.length !== 4) return toast('Game codes are 4 letters.');
       if (!name) return toast('Enter your name first.');
+      el.disabled = true;
       try {
-        const res = await api('/api/join', { room, name, token: loadToken(room) });
-        saveToken(res.room, res.token);
-        enterRoom(res.room, res.token);
+        await table.join(room, name);
+        rememberRoom(room);
+        history.replaceState(null, '', `#${room}`);
       } catch (err) {
         toast(err.message);
+      } finally {
+        el.disabled = false;
       }
       return;
     }
     case 'share': {
-      const link = `${location.origin}/#${S.room}`;
+      const link = `${location.origin}${location.pathname}#${table.code}`;
       try {
         if (navigator.share) await navigator.share({ title: 'Five Crowns', url: link });
         else {
@@ -637,9 +644,9 @@ appEl.addEventListener('click', async (e) => {
       }
       return;
     }
-    case 'start': return void act('start');
-    case 'next-round': return void act('nextRound');
-    case 'rematch': return void act('rematch');
+    case 'start': return void table.start().catch((e) => toast(e.message));
+    case 'next-round': return void table.nextRound().catch((e) => toast(e.message));
+    case 'rematch': return void table.rematch().catch((e) => toast(e.message));
     case 'draw-stock': return void act('draw', { source: 'stock' });
     case 'draw-discard': return void act('draw', { source: 'discard' });
     case 'discard': {
@@ -680,55 +687,28 @@ appEl.addEventListener('click', async (e) => {
   }
 });
 
-// ------------------------------------------------------------------ connection
-function enterRoom(room, token) {
-  S.room = room;
-  S.token = token;
-  S.joinError = null;
-  localStorage.setItem(`fivecrowns.last${suffix}`, room);
-  history.replaceState(null, '', `#${room}`);
-  connect();
-}
-
-function connect() {
-  S.source?.close();
-  const source = new EventSource(
-    `/api/stream?room=${encodeURIComponent(S.room)}&token=${encodeURIComponent(S.token)}`
-  );
-  S.source = source;
-
-  source.addEventListener('state', (e) => {
-    const incoming = JSON.parse(e.data);
-    const before = S.state;
-    S.state = incoming;
-    // A new deal or a turn that moved on invalidates anything half-built.
-    if (!before || before.round !== incoming.round) {
-      S.order = [];
-      S.selection.clear();
-      S.builder = null;
-    }
-    if (before && before.turnIndex !== incoming.turnIndex) S.builder = null;
-    if (!S.connected) {
-      S.connected = true;
-    }
-    render();
-  });
-
-  source.onerror = () => {
-    // EventSource retries on its own; only surface a lasting failure.
-    if (source.readyState === EventSource.CLOSED) {
-      S.joinError = 'Lost the connection to that game. Try joining again.';
-      S.state = null;
-      render();
-    }
-  };
-}
-
 // ------------------------------------------------------------------ boot
-(function boot() {
+(async function boot() {
+  if (!configured()) {
+    appEl.innerHTML = `<div class="panel" style="margin-top:2rem">
+      <h2>Not set up yet</h2>
+      <p class="muted">This copy has no game database configured, so rooms cannot be
+      created. Whoever put it online needs to paste a Firebase Realtime Database URL
+      into <code>js/firebase-config.js</code> — see the README.</p></div>`;
+    return;
+  }
   const hash = (location.hash || '').replace('#', '').toUpperCase().slice(0, 4);
-  const room = hash || localStorage.getItem(`fivecrowns.last${suffix}`);
-  const token = room ? loadToken(room) : null;
-  if (room && token) enterRoom(room, token);
-  else renderHome();
+  const room = hash || lastRoom();
+  if (room) {
+    try {
+      if (await table.resume(room)) {
+        rememberRoom(room);
+        history.replaceState(null, '', `#${room}`);
+        return;
+      }
+    } catch {
+      /* fall through to the front page */
+    }
+  }
+  renderHome();
 })();
