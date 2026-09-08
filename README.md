@@ -57,23 +57,32 @@ stops existing when you stop the command.
 
 ### Putting it somewhere your family can reach
 
-The app is a single Node process serving both the page and the game, so almost
-any host works. Point the host at `npm start`; it listens on `$PORT` (default
-3000).
+The app is a single Node process serving both the page and the game, so any host
+that runs Node works. It listens on `$PORT` (default 3000) and needs no build
+step. `render.yaml` in this repo configures [Render](https://render.com):
 
-- **A hosting service** — Render, Railway, Fly.io and similar all run this as-is:
-  new web service, build command `echo none`, start command `npm start`.
-- **A computer at home** — run `npm start` and expose it with a Cloudflare Tunnel
-  (`cloudflared tunnel --url http://localhost:3000`) or ngrok. Fine for a game
-  night; the URL disappears when you stop the tunnel.
+1. Sign in to Render with GitHub and choose **New → Blueprint**.
+2. Pick this repository and the branch the code is on.
+3. Deploy. You get a permanent `https://….onrender.com` address to text everyone.
 
-Two things to know if you deploy it:
+Railway and Fly.io work the same way — start command `npm start`, no build
+command.
+
+**GitHub Pages will not work.** It serves static files only, and this game needs
+a running process to hold the shared deck, sequence turns, and make sure your
+hand goes to you and nobody else.
+
+Three things to know if you deploy it:
 
 - Games live in the server's memory and are mirrored to `data/rooms.json`, so a
-  restart or redeploy doesn't lose a game in progress. Run **one** instance —
-  two instances would each have their own idea of the game.
-- If your host puts the app to sleep when idle, players' connections drop; the
-  page reconnects by itself when the server wakes up.
+  restart doesn't lose a game in progress. Run **one** instance — two instances
+  would each have their own idea of the game.
+- Free tiers usually sleep after ~15 minutes with no traffic, and their disk is
+  wiped when they do. The first person to open the link waits half a minute for
+  it to wake, and a game abandoned over dinner may not survive. A paid instance,
+  or any host that doesn't sleep, avoids both.
+- If your host puts the app to sleep, players' connections drop; the page
+  reconnects by itself when the server wakes up.
 
 Unfinished games are cleaned up after three days.
 
